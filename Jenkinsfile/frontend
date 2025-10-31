@@ -230,7 +230,7 @@ pipeline {
                         subject: "Pipeline ${buildStatus}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <p>Frontend Google-Shop DevSecops pipeline status.</p>
-                            <p>Youtube Link :- https://www.youtube.com/@devopsHarishNShetty </p>
+                            <p>Github Link :- https://github.com/elsonpulikkan96</p>
                             <p>Project: ${env.JOB_NAME}</p>
                             <p>Build Number: ${env.BUILD_NUMBER}</p>
                             <p>Build Status: ${buildStatus}</p>
@@ -238,8 +238,8 @@ pipeline {
                             <p>Build URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
 
                         """,
-                        to: 'harishn662@gmail.com',
-                        from: 'harishn662@gmail.com',
+                        to: 'elsonpulikkan@gmail.com',
+                        from: 'elsonpulikkan@gmail.com',
                         mimeType: 'text/html',
                         attachmentsPattern: 'trivy-fs-report.txt,trivy-image-frontend.json,trivy-image-frontend.txt,gosec-report.json'
                     )
