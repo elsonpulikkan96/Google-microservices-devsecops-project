@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_NAME  = 'harishnshetty/loadgenerator'
+        DOCKER_NAME  = 'elsonpulikkan/loadgenerator'
         IMAGE_NAME   = 'loadgenerator'
         PATH = "$PATH:/var/lib/jenkins/.local/bin"   // <-- Fix: add pip install path
     }
@@ -20,7 +20,7 @@ pipeline {
 
         stage("Git Checkout") {
             steps {
-                git branch: 'main', url: 'https://github.com/harishnshetty/Google-microservices-devsecops-project.git'
+                git branch: 'main', url: 'https://github.com/elsonpulikkan96/Google-microservices-devsecops-project.git'
             }
         }
 
@@ -128,7 +128,7 @@ pipeline {
                 dir('src/loadgenerator') {
                     withCredentials([string(credentialsId: 'docker-cred', variable: 'dockerpwd')]) {
                         sh '''
-                        docker login -u harishnshetty -p ${dockerpwd}
+                        docker login -u elsonpulikkan -p ${dockerpwd}
                         docker push ${IMAGE_TAG}
                         docker tag ${IMAGE_NAME} ${DOCKER_NAME}:latest
                         docker push ${DOCKER_NAME}:latest
@@ -168,15 +168,16 @@ pipeline {
                         subject: "Pipeline ${buildStatus}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <p>loadgenerator Google-Shop DevSecOps pipeline status.</p>
-                            <p>Youtube Link :- https://www.youtube.com/@devopsHarishNShetty </p>
+                            <p>Github Link :- https://github.com/elsonpulikkan96/ </p>
+                            <p>Live Website: https://store.elsondevops.cloud/</p>
                             <p>Project: ${env.JOB_NAME}</p>
                             <p>Build Number: ${env.BUILD_NUMBER}</p>
                             <p>Build Status: ${buildStatus}</p>
                             <p>Started by: ${buildUser}</p>
                             <p>Build URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
                         """,
-                        to: 'harishn662@gmail.com',
-                        from: 'harishn662@gmail.com',
+                        to: 'elsonpulikkan@gmail.com',
+                        from: 'elsonpulikkan@gmail.com',
                         mimeType: 'text/html',
                         attachmentsPattern: 'bandit-report.json,safety-report.json,trivy-fs-report.txt,trivy-image-email.json,trivy-image-email.txt'
                     )

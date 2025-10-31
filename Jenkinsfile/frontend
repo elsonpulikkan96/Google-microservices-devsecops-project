@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_NAME = 'harishnshetty/frontend'
+        DOCKER_NAME = 'elsonpulikkan/frontend'
         IMAGE_NAME = 'frontend'
         // This is a global definition. We'll ensure it's used correctly below.
         GO_BIN_PATH = '$(go env GOPATH)/bin'
@@ -22,7 +22,7 @@ pipeline {
 
         stage("Git Checkout") {
             steps {
-                git branch: 'main', url: 'https://github.com/harishnshetty/Google-microservices-devsecops-project.git'
+                git branch: 'main', url: 'https://github.com/elsonpulikkan96/Google-microservices-devsecops-project.git'
             }
         }
 
@@ -182,7 +182,7 @@ pipeline {
                 dir('src/frontend') {
                     script {
                         withCredentials([string(credentialsId: 'docker-cred', variable: 'dockerpwd')]) {
-                            sh "docker login -u harishnshetty -p ${dockerpwd}"
+                            sh "docker login -u elsonpulikkan -p ${dockerpwd}"
                             sh "docker tag $IMAGE_NAME ${env.IMAGE_TAG}"
                             sh "docker push ${env.IMAGE_TAG}"
 
@@ -231,6 +231,7 @@ pipeline {
                         body: """
                             <p>Frontend Google-Shop DevSecops pipeline status.</p>
                             <p>Github Link :- https://github.com/elsonpulikkan96</p>
+                            <p>Live Website: https://store.elsondevops.cloud/</p>
                             <p>Project: ${env.JOB_NAME}</p>
                             <p>Build Number: ${env.BUILD_NUMBER}</p>
                             <p>Build Status: ${buildStatus}</p>

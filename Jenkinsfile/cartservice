@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_NAME  = 'harishnshetty/cartservice'
+        DOCKER_NAME  = 'elsonpulikkan/cartservice'
         IMAGE_NAME   = 'cartservice'
     }
 
@@ -19,7 +19,7 @@ pipeline {
 
         stage("Git Checkout") {
             steps {
-                git branch: 'main', url: 'https://github.com/harishnshetty/Google-microservices-devsecops-project.git'
+                git branch: 'main', url: 'https://github.com/elsonpulikkan96/Google-microservices-devsecops-project.git'
             }
         }
 
@@ -126,7 +126,7 @@ pipeline {
             steps {
                 dir('src/cartservice') {
                     withCredentials([string(credentialsId: 'docker-cred', variable: 'dockerpwd')]) {
-                            sh "docker login -u harishnshetty -p ${dockerpwd}"
+                            sh "docker login -u elsonpulikkan -p ${dockerpwd}"
                             sh "docker tag $IMAGE_NAME ${env.IMAGE_TAG}"
                             sh "docker push ${env.IMAGE_TAG}"
 
@@ -169,15 +169,16 @@ pipeline {
                         subject: "Pipeline ${buildStatus}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <p>Cartservice Google-Shop DevSecOps pipeline status.</p>
-                            <p>Youtube Link :- https://www.youtube.com/@devopsHarishNShetty </p>
-                            <p>Project: ${env.JOB_NAME}</p>
+                            <p>Github Link :- https://github.com/elsonpulikkan96/ </p>
+                            <p>Live Website: https://store.elsondevops.cloud/</p>
+		            <p>Project: ${env.JOB_NAME}</p>
                             <p>Build Number: ${env.BUILD_NUMBER}</p>
                             <p>Build Status: ${buildStatus}</p>
                             <p>Started by: ${buildUser}</p>
                             <p>Build URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
                         """,
-                        to: 'harishn662@gmail.com',
-                        from: 'harishn662@gmail.com',
+                        to: 'elsonpulikkan@gmail.com',
+                        from: 'elsonpulikkangmail.com',
                         mimeType: 'text/html',
                         attachmentsPattern: 'trivy-fs-report.txt,trivy-image-cart.json,trivy-image-cart.txt,dependency-check-report.xml'
                     )
