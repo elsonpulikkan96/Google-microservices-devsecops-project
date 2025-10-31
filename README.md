@@ -1,4 +1,4 @@
-#  Online shopping E-commerce Website and 11 MicroService DevSecops Project with K8s, Gitops.
+#  Developed a cloud-native e-commerce platform composed of 11 microservices deployed on Kubernetes, featuring a complete DevSecOps pipeline with GitOps, Jenkins, Docker, SonarQube for code quality, and observability using Prometheus and Grafana.
 
 ## This project Forked from the https://github.com/GoogleCloudPlatform/microservices-demo (Org source)
 
@@ -616,7 +616,7 @@ Password: encrypted-password
 ---
 
 ##  Delete EKS Cluster (Cleanup) finally u done a project 
- - For more conents reach out https://harishnshetty.github.io/projects.html
+ - For more conents reach out : https://github.com/elsonpulikkan96/
 
 ```bash
 eksctl delete cluster --name my-cluster --region ap-south-1
