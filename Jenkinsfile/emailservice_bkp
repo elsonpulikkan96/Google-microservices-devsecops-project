@@ -29,25 +29,8 @@ pipeline {
             steps {
                 dir('src/emailservice') {
                     sh '''
-                    set -euo pipefail
-
-                    # create venv in workspace (idempotent)
-                    if [ ! -d ".venv" ]; then
-                      python3 -m venv .venv
-                    fi
-
-                    # use venv pip / python
-                    . .venv/bin/activate
-                    .venv/bin/pip install --upgrade pip setuptools wheel
-
-                    # install bandit inside venv and run scan
-                    .venv/bin/pip install --no-cache-dir bandit
-                    .venv/bin/bandit -r . -f json -o bandit-report.json || true
-                    .venv/bin/bandit -r . -f html -o bandit-report.html || true
-
-                    # copy reports to workspace root so attachmentsPattern 'bandit-report.json' works
-                    cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
-                    cp -f bandit-report.html ${WORKSPACE}/bandit-report.html || true
+                    python3 -m pip install --user --upgrade bandit
+                    bandit -r . -f json -o bandit-report.json || true
                     '''
                 }
             }
@@ -89,24 +72,7 @@ pipeline {
         stage("Install Dependencies") {
             steps {
                 dir('src/emailservice') {
-                    sh '''
-                    set -euo pipefail
-
-                    if [ ! -d ".venv" ]; then
-                      python3 -m venv .venv
-                    fi
-                    . .venv/bin/activate
-                    .venv/bin/pip install --upgrade pip
-
-                    if [ -f requirements.txt ]; then
-                      .venv/bin/pip install --no-cache-dir -r requirements.txt || true
-                    fi
-
-                    # ensure bandit report (if generated earlier) is present at workspace root for email attachments
-                    if [ -f bandit-report.json ]; then
-                      cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
-                    fi
-                    '''
+                    sh 'python3 -m pip install --user -r requirements.txt || true'
                 }
             }
         }
@@ -116,18 +82,8 @@ pipeline {
             steps {
                 dir('src/emailservice') {
                     sh '''
-                    set -euo pipefail
-                    if [ ! -d ".venv" ]; then
-                      python3 -m venv .venv
-                    fi
-                    . .venv/bin/activate
-                    .venv/bin/pip install --upgrade pip
-                    .venv/bin/pip install --no-cache-dir safety || true
-
-                    .venv/bin/python -m safety check --full-report --output json > safety-report.json || true
-
-                    # copy to workspace root so attachmentsPattern 'safety-report.json' works
-                    cp -f safety-report.json ${WORKSPACE}/safety-report.json || true
+                    python3 -m pip install --user safety
+                    safety check --full-report --output json > safety-report.json || true
                     '''
                 }
             }
