@@ -28,29 +28,10 @@ pipeline {
         stage("Bandit Security Scan") {
             steps {
                 dir('src/recommendationservice') {
-                    sh """
-                      bash -lc '
-                        set -euo pipefail
-
-                        # create venv in workspace (idempotent)
-                        if [ ! -d ".venv" ]; then
-                          python3 -m venv .venv
-                        fi
-
-                        # use venv pip / python
-                        . .venv/bin/activate
-                        .venv/bin/pip install --upgrade pip setuptools wheel
-
-                        # install bandit and run scan
-                        .venv/bin/pip install --no-cache-dir bandit
-                        .venv/bin/bandit -r . -f json -o bandit-report.json || true
-                        .venv/bin/bandit -r . -f html -o bandit-report.html || true
-
-                        # copy reports to workspace root so email attachments work
-                        cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
-                        cp -f bandit-report.html ${WORKSPACE}/bandit-report.html || true
-                      '
-                    """
+                    sh '''
+                    python3 -m pip install --user --upgrade bandit
+                    bandit -r . -f json -o bandit-report.json || true
+                    '''
                 }
             }
             post {
@@ -91,26 +72,7 @@ pipeline {
         stage("Install Dependencies") {
             steps {
                 dir('src/recommendationservice') {
-                    sh """
-                      bash -lc '
-                        set -euo pipefail
-
-                        if [ ! -d ".venv" ]; then
-                          python3 -m venv .venv
-                        fi
-                        . .venv/bin/activate
-                        .venv/bin/pip install --upgrade pip
-
-                        if [ -f requirements.txt ]; then
-                          .venv/bin/pip install --no-cache-dir -r requirements.txt || true
-                        fi
-
-                        # ensure bandit report (if generated earlier) is present at workspace root for email attachments
-                        if [ -f bandit-report.json ]; then
-                          cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
-                        fi
-                      '
-                    """
+                    sh 'python3 -m pip install --user -r requirements.txt || true'
                 }
             }
         }
@@ -119,23 +81,10 @@ pipeline {
         stage("Safety Dependency Scan") {
             steps {
                 dir('src/recommendationservice') {
-                    sh """
-                      bash -lc '
-                        set -euo pipefail
-
-                        if [ ! -d ".venv" ]; then
-                          python3 -m venv .venv
-                        fi
-                        . .venv/bin/activate
-                        .venv/bin/pip install --upgrade pip
-                        .venv/bin/pip install --no-cache-dir safety || true
-
-                        .venv/bin/python -m safety check --full-report --output json > safety-report.json || true
-
-                        # copy to workspace root so attachmentsPattern 'safety-report.json' works
-                        cp -f safety-report.json ${WORKSPACE}/safety-report.json || true
-                      '
-                    """
+                    sh '''
+                    python3 -m pip install --user safety
+                    safety check --full-report --output json > safety-report.json || true
+                    '''
                 }
             }
             post {
@@ -164,10 +113,10 @@ pipeline {
             steps {
                 dir('src/recommendationservice') {
                     script {
-                        env.IMAGE_TAG = "${DOCKER_NAME}:${BUILD_NUMBER}"
-                        sh "docker rmi -f ${IMAGE_NAME} ${env.IMAGE_TAG} || true"
-                        sh "docker build -t ${IMAGE_NAME} ."
-                        sh "docker tag ${IMAGE_NAME} ${env.IMAGE_TAG}"
+                        env.IMAGE_TAG = "$DOCKER_NAME:${BUILD_NUMBER}"
+                        sh "docker rmi -f $IMAGE_NAME ${env.IMAGE_TAG} || true"
+                        sh "docker build -t $IMAGE_NAME ."
+                        sh "docker tag $IMAGE_NAME ${env.IMAGE_TAG}"
                     }
                 }
             }
@@ -194,18 +143,14 @@ pipeline {
             steps {
                 dir('src/recommendationservice') {
                     sh '''
-                    trivy image -f json -o trivy-image-recommendation.json ${IMAGE_TAG} || true
-                    trivy image -f table -o trivy-image-recommendation.txt ${IMAGE_TAG} || true
-
-                    # copy to workspace root for attachments (if needed)
-                    cp -f trivy-image-recommendation.json ${WORKSPACE}/trivy-image-recommendation.json || true
-                    cp -f trivy-image-recommendation.txt ${WORKSPACE}/trivy-image-recommendation.txt || true
+                    trivy image -f json -o trivy-image-email.json ${IMAGE_TAG}
+                    trivy image -f table -o trivy-image-email.txt ${IMAGE_TAG}
                     '''
                 }
             }
             post {
                 always {
-                    archiveArtifacts 'src/recommendationservice/trivy-image-recommendation.*'
+                    archiveArtifacts 'src/recommendationservice/trivy-image-email.*'
                 }
             }
         }
@@ -234,7 +179,7 @@ pipeline {
                         to: 'elsonpulikkan@gmail.com',
                         from: 'elsonpulikkan@gmail.com',
                         mimeType: 'text/html',
-                        attachmentsPattern: 'bandit-report.json,safety-report.json,trivy-fs-report.txt,trivy-image-recommendation.json,trivy-image-recommendation.txt'
+                        attachmentsPattern: 'bandit-report.json,safety-report.json,trivy-fs-report.txt,trivy-image-email.json,trivy-image-email.txt'
                     )
                 }
             }
