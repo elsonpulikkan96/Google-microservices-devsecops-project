@@ -28,27 +28,30 @@ pipeline {
         stage("Bandit Security Scan") {
             steps {
                 dir('src/emailservice') {
-                    sh '''
-                    set -euo pipefail
+                    // run under bash so `pipefail` is supported
+                    sh """
+                      bash -lc '
+                        set -euo pipefail
 
-                    # create venv in workspace (idempotent)
-                    if [ ! -d ".venv" ]; then
-                      python3 -m venv .venv
-                    fi
+                        # create venv in workspace (idempotent)
+                        if [ ! -d ".venv" ]; then
+                          python3 -m venv .venv
+                        fi
 
-                    # use venv pip / python
-                    . .venv/bin/activate
-                    .venv/bin/pip install --upgrade pip setuptools wheel
+                        # use venv pip / python
+                        . .venv/bin/activate
+                        .venv/bin/pip install --upgrade pip setuptools wheel
 
-                    # install bandit inside venv and run scan
-                    .venv/bin/pip install --no-cache-dir bandit
-                    .venv/bin/bandit -r . -f json -o bandit-report.json || true
-                    .venv/bin/bandit -r . -f html -o bandit-report.html || true
+                        # install bandit inside venv and run scan
+                        .venv/bin/pip install --no-cache-dir bandit
+                        .venv/bin/bandit -r . -f json -o bandit-report.json || true
+                        .venv/bin/bandit -r . -f html -o bandit-report.html || true
 
-                    # copy reports to workspace root so attachmentsPattern 'bandit-report.json' works
-                    cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
-                    cp -f bandit-report.html ${WORKSPACE}/bandit-report.html || true
-                    '''
+                        # copy reports to workspace root so attachmentsPattern 'bandit-report.json' works
+                        cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
+                        cp -f bandit-report.html ${WORKSPACE}/bandit-report.html || true
+                      '
+                    """
                 }
             }
             post {
@@ -89,24 +92,26 @@ pipeline {
         stage("Install Dependencies") {
             steps {
                 dir('src/emailservice') {
-                    sh '''
-                    set -euo pipefail
+                    sh """
+                      bash -lc '
+                        set -euo pipefail
 
-                    if [ ! -d ".venv" ]; then
-                      python3 -m venv .venv
-                    fi
-                    . .venv/bin/activate
-                    .venv/bin/pip install --upgrade pip
+                        if [ ! -d ".venv" ]; then
+                          python3 -m venv .venv
+                        fi
+                        . .venv/bin/activate
+                        .venv/bin/pip install --upgrade pip
 
-                    if [ -f requirements.txt ]; then
-                      .venv/bin/pip install --no-cache-dir -r requirements.txt || true
-                    fi
+                        if [ -f requirements.txt ]; then
+                          .venv/bin/pip install --no-cache-dir -r requirements.txt || true
+                        fi
 
-                    # ensure bandit report (if generated earlier) is present at workspace root for email attachments
-                    if [ -f bandit-report.json ]; then
-                      cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
-                    fi
-                    '''
+                        # ensure bandit report (if generated earlier) is present at workspace root for email attachments
+                        if [ -f bandit-report.json ]; then
+                          cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
+                        fi
+                      '
+                    """
                 }
             }
         }
@@ -115,20 +120,23 @@ pipeline {
         stage("Safety Dependency Scan") {
             steps {
                 dir('src/emailservice') {
-                    sh '''
-                    set -euo pipefail
-                    if [ ! -d ".venv" ]; then
-                      python3 -m venv .venv
-                    fi
-                    . .venv/bin/activate
-                    .venv/bin/pip install --upgrade pip
-                    .venv/bin/pip install --no-cache-dir safety || true
+                    sh """
+                      bash -lc '
+                        set -euo pipefail
 
-                    .venv/bin/python -m safety check --full-report --output json > safety-report.json || true
+                        if [ ! -d ".venv" ]; then
+                          python3 -m venv .venv
+                        fi
+                        . .venv/bin/activate
+                        .venv/bin/pip install --upgrade pip
+                        .venv/bin/pip install --no-cache-dir safety || true
 
-                    # copy to workspace root so attachmentsPattern 'safety-report.json' works
-                    cp -f safety-report.json ${WORKSPACE}/safety-report.json || true
-                    '''
+                        .venv/bin/python -m safety check --full-report --output json > safety-report.json || true
+
+                        # copy to workspace root so attachmentsPattern works
+                        cp -f safety-report.json ${WORKSPACE}/safety-report.json || true
+                      '
+                    """
                 }
             }
             post {
@@ -142,6 +150,7 @@ pipeline {
         stage("Trivy File Scan") {
             steps {
                 dir('src/emailservice') {
+                    // trivy is run directly (must be installed on Jenkins host PATH)
                     sh 'trivy fs . --severity CRITICAL,HIGH --exit-code 1 --scanners vuln,misconfig,secret > trivy-fs-report.txt || true'
                 }
             }
