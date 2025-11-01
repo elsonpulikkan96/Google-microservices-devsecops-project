@@ -8,8 +8,8 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_NAME  = 'elsonpulikkan/loadgenerator'
-        IMAGE_NAME   = 'loadgenerator'
+        DOCKER_NAME  = 'elsonpulikkan/recommendationservice'
+        IMAGE_NAME   = 'recommendationservice'
         PATH = "$PATH:/var/lib/jenkins/.local/bin"   // <-- Fix: add pip install path
     }
 
@@ -27,16 +27,35 @@ pipeline {
         // --- SAST: Bandit ---
         stage("Bandit Security Scan") {
             steps {
-                dir('src/loadgenerator') {
-                    sh '''
-                    python3 -m pip install --user --upgrade bandit
-                    bandit -r . -f json -o bandit-report.json || true
-                    '''
+                dir('src/recommendationservice') {
+                    sh """
+                      bash -lc '
+                        set -euo pipefail
+
+                        # create venv in workspace (idempotent)
+                        if [ ! -d ".venv" ]; then
+                          python3 -m venv .venv
+                        fi
+
+                        # use venv pip / python
+                        . .venv/bin/activate
+                        .venv/bin/pip install --upgrade pip setuptools wheel
+
+                        # install bandit and run scan
+                        .venv/bin/pip install --no-cache-dir bandit
+                        .venv/bin/bandit -r . -f json -o bandit-report.json || true
+                        .venv/bin/bandit -r . -f html -o bandit-report.html || true
+
+                        # copy reports to workspace root so email attachments work
+                        cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
+                        cp -f bandit-report.html ${WORKSPACE}/bandit-report.html || true
+                      '
+                    """
                 }
             }
             post {
                 always {
-                    archiveArtifacts 'src/loadgenerator/bandit-report.json'
+                    archiveArtifacts 'src/recommendationservice/bandit-report.json'
                 }
             }
         }
@@ -44,12 +63,12 @@ pipeline {
         // --- SAST: SonarQube ---
         stage("SonarQube Analysis") {
             steps {
-                dir('src/loadgenerator') {
+                dir('src/recommendationservice') {
                     withSonarQubeEnv('sonar-server') {
                         sh '''
                         $SCANNER_HOME/bin/sonar-scanner \
-                          -Dsonar.projectKey=loadgenerator \
-                          -Dsonar.projectName=loadgenerator \
+                          -Dsonar.projectKey=recommendationservice \
+                          -Dsonar.projectName=recommendationservice \
                           -Dsonar.sources=. \
                           -Dsonar.language=py
                         '''
@@ -71,8 +90,27 @@ pipeline {
         // --- Install Dependencies ---
         stage("Install Dependencies") {
             steps {
-                dir('src/loadgenerator') {
-                    sh 'python3 -m pip install --user -r requirements.txt || true'
+                dir('src/recommendationservice') {
+                    sh """
+                      bash -lc '
+                        set -euo pipefail
+
+                        if [ ! -d ".venv" ]; then
+                          python3 -m venv .venv
+                        fi
+                        . .venv/bin/activate
+                        .venv/bin/pip install --upgrade pip
+
+                        if [ -f requirements.txt ]; then
+                          .venv/bin/pip install --no-cache-dir -r requirements.txt || true
+                        fi
+
+                        # ensure bandit report (if generated earlier) is present at workspace root for email attachments
+                        if [ -f bandit-report.json ]; then
+                          cp -f bandit-report.json ${WORKSPACE}/bandit-report.json || true
+                        fi
+                      '
+                    """
                 }
             }
         }
@@ -80,16 +118,29 @@ pipeline {
         // --- Dependency Scan (Safety) ---
         stage("Safety Dependency Scan") {
             steps {
-                dir('src/loadgenerator') {
-                    sh '''
-                    python3 -m pip install --user safety
-                    safety check --full-report --output json > safety-report.json || true
-                    '''
+                dir('src/recommendationservice') {
+                    sh """
+                      bash -lc '
+                        set -euo pipefail
+
+                        if [ ! -d ".venv" ]; then
+                          python3 -m venv .venv
+                        fi
+                        . .venv/bin/activate
+                        .venv/bin/pip install --upgrade pip
+                        .venv/bin/pip install --no-cache-dir safety || true
+
+                        .venv/bin/python -m safety check --full-report --output json > safety-report.json || true
+
+                        # copy to workspace root so attachmentsPattern 'safety-report.json' works
+                        cp -f safety-report.json ${WORKSPACE}/safety-report.json || true
+                      '
+                    """
                 }
             }
             post {
                 always {
-                    archiveArtifacts 'src/loadgenerator/safety-report.json'
+                    archiveArtifacts 'src/recommendationservice/safety-report.json'
                 }
             }
         }
@@ -97,13 +148,13 @@ pipeline {
         // --- Trivy FS Scan ---
         stage("Trivy File Scan") {
             steps {
-                dir('src/loadgenerator') {
+                dir('src/recommendationservice') {
                     sh 'trivy fs . --severity CRITICAL,HIGH --exit-code 1 --scanners vuln,misconfig,secret > trivy-fs-report.txt || true'
                 }
             }
             post {
                 always {
-                    archiveArtifacts 'src/loadgenerator/trivy-fs-report.txt'
+                    archiveArtifacts 'src/recommendationservice/trivy-fs-report.txt'
                 }
             }
         }
@@ -111,12 +162,12 @@ pipeline {
         // --- Build Docker Image ---
         stage("Build Docker Image") {
             steps {
-                dir('src/loadgenerator') {
+                dir('src/recommendationservice') {
                     script {
-                        env.IMAGE_TAG = "$DOCKER_NAME:${BUILD_NUMBER}"
-                        sh "docker rmi -f $IMAGE_NAME ${env.IMAGE_TAG} || true"
-                        sh "docker build -t $IMAGE_NAME ."
-                        sh "docker tag $IMAGE_NAME ${env.IMAGE_TAG}"
+                        env.IMAGE_TAG = "${DOCKER_NAME}:${BUILD_NUMBER}"
+                        sh "docker rmi -f ${IMAGE_NAME} ${env.IMAGE_TAG} || true"
+                        sh "docker build -t ${IMAGE_NAME} ."
+                        sh "docker tag ${IMAGE_NAME} ${env.IMAGE_TAG}"
                     }
                 }
             }
@@ -125,7 +176,7 @@ pipeline {
         // --- Push Docker Image ---
         stage("Push to DockerHub") {
             steps {
-                dir('src/loadgenerator') {
+                dir('src/recommendationservice') {
                     withCredentials([string(credentialsId: 'docker-cred', variable: 'dockerpwd')]) {
                         sh '''
                         docker login -u elsonpulikkan -p ${dockerpwd}
@@ -141,16 +192,20 @@ pipeline {
         // --- Trivy Image Scan ---
         stage("Trivy Scan Image") {
             steps {
-                dir('src/loadgenerator') {
+                dir('src/recommendationservice') {
                     sh '''
-                    trivy image -f json -o trivy-image-email.json ${IMAGE_TAG}
-                    trivy image -f table -o trivy-image-email.txt ${IMAGE_TAG}
+                    trivy image -f json -o trivy-image-recommendation.json ${IMAGE_TAG} || true
+                    trivy image -f table -o trivy-image-recommendation.txt ${IMAGE_TAG} || true
+
+                    # copy to workspace root for attachments (if needed)
+                    cp -f trivy-image-recommendation.json ${WORKSPACE}/trivy-image-recommendation.json || true
+                    cp -f trivy-image-recommendation.txt ${WORKSPACE}/trivy-image-recommendation.txt || true
                     '''
                 }
             }
             post {
                 always {
-                    archiveArtifacts 'src/loadgenerator/trivy-image-email.*'
+                    archiveArtifacts 'src/recommendationservice/trivy-image-recommendation.*'
                 }
             }
         }
@@ -159,7 +214,7 @@ pipeline {
     // --- Final Notifications ---
     post {
         always {
-            dir('src/loadgenerator') {
+            dir('src/recommendationservice') {
                 script {
                     def buildStatus = currentBuild.currentResult
                     def buildUser = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]?.userId ?: ' Github User'
@@ -167,10 +222,10 @@ pipeline {
                     emailext (
                         subject: "Pipeline ${buildStatus}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
-                            <p>loadgenerator Google-Shop DevSecOps pipeline status.</p>
+                            <p>recommendationservice Google-Shop DevSecOps pipeline status.</p>
                             <p>Github Link :- https://github.com/elsonpulikkan96/ </p>
                             <p>Live Website: https://store.elsondevops.cloud/</p>
-                            <p>Project: ${env.JOB_NAME}</p>
+			    <p>Project: ${env.JOB_NAME}</p>
                             <p>Build Number: ${env.BUILD_NUMBER}</p>
                             <p>Build Status: ${buildStatus}</p>
                             <p>Started by: ${buildUser}</p>
@@ -179,7 +234,7 @@ pipeline {
                         to: 'elsonpulikkan@gmail.com',
                         from: 'elsonpulikkan@gmail.com',
                         mimeType: 'text/html',
-                        attachmentsPattern: 'bandit-report.json,safety-report.json,trivy-fs-report.txt,trivy-image-email.json,trivy-image-email.txt'
+                        attachmentsPattern: 'bandit-report.json,safety-report.json,trivy-fs-report.txt,trivy-image-recommendation.json,trivy-image-recommendation.txt'
                     )
                 }
             }
