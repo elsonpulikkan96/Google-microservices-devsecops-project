@@ -51,13 +51,14 @@ pipeline {
                                 waitForQualityGate abortPipeline: true, credentialsId: 'sonar-token'
                             } catch (Exception e) {
                                 echo "Quality Gate failed but continuing for development: ${e.message}"
+                                // Uncomment below line to make it non-blocking
+                                // currentBuild.result = 'UNSTABLE'
                             }
                         }
                     }
                 }
             }
         }
-
         // --- Build & Unit Tests ---
         stage("Build & Test") {
             steps {
@@ -71,32 +72,16 @@ pipeline {
             }
         }
 
-        // --- Dependency Check (Fixed) ---
+        // --- Dependency Check (SCA) ---
         stage("Dependency Check") {
             steps {
                 dir('src/cartservice') {
-                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                        // ensure persistent cache directory exists
-                        sh '''
-                        mkdir -p /var/lib/jenkins/.dependency-check-data
-                        chmod 777 /var/lib/jenkins/.dependency-check-data
-                        '''
-
-                        // run dependency-check with retry and local cache
-                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                            dependencyCheck additionalArguments: """
-                                --scan ./ 
-                                --format XML 
-                                --out dependency-check-report.xml 
-                                --nvdApiKey ${NVD_API_KEY} 
-                                --data /var/lib/jenkins/.dependency-check-data 
-                                --nvdMaxRetryCount 10 
-                                --nvdValidForHours 720 
-                                --noupdate
-                            """,
-                            odcInstallation: 'dp-check'
-                        }
-                    }
+                    dependencyCheck additionalArguments: ''' 
+                        --scan ./ 
+                        --format XML 
+                        --out dependency-check-report.xml 
+                    ''',
+                    odcInstallation: 'dp-check'
                 }
             }
             post {
@@ -130,6 +115,7 @@ pipeline {
                         env.IMAGE_TAG = "$DOCKER_NAME:${BUILD_NUMBER}"
                         sh "docker rmi -f $IMAGE_NAME ${env.IMAGE_TAG} || true"
                         sh "docker build -t $IMAGE_NAME ."
+                        
                     }
                 }
             }
@@ -140,14 +126,13 @@ pipeline {
             steps {
                 dir('src/cartservice') {
                     withCredentials([string(credentialsId: 'docker-cred', variable: 'dockerpwd')]) {
-                        sh '''
-                        echo "$dockerpwd" | docker login -u elsonpulikkan --password-stdin
-                        docker tag cartservice ${IMAGE_TAG}
-                        docker push ${IMAGE_TAG}
+                            sh "docker login -u elsonpulikkan -p ${dockerpwd}"
+                            sh "docker tag $IMAGE_NAME ${env.IMAGE_TAG}"
+                            sh "docker push ${env.IMAGE_TAG}"
 
-                        docker tag cartservice ${DOCKER_NAME}:latest
-                        docker push ${DOCKER_NAME}:latest
-                        '''
+                            // Also push latest
+                            sh "docker tag $IMAGE_NAME $DOCKER_NAME:latest"
+                            sh "docker push $DOCKER_NAME:latest"
                     }
                 }
             }
@@ -157,11 +142,11 @@ pipeline {
         stage("Trivy Scan Image") {
             steps {
                 dir('src/cartservice') {
-                    sh '''
-                    trivy image -f json -o trivy-image-cart.json ${IMAGE_TAG}
-                    trivy image -f table -o trivy-image-cart.txt ${IMAGE_TAG}
-                    '''
-                }
+                sh '''
+                trivy image -f json -o trivy-image-cart.json ${IMAGE_TAG}
+                trivy image -f table -o trivy-image-cart.txt ${IMAGE_TAG}
+                '''
+            }
             }
             post {
                 always {
@@ -178,15 +163,15 @@ pipeline {
             dir('src/cartservice') {
                 script {
                     def buildStatus = currentBuild.currentResult
-                    def buildUser = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]?.userId ?: 'Github User'
+                    def buildUser = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]?.userId ?: ' Github User'
 
                     emailext (
                         subject: "Pipeline ${buildStatus}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <p>Cartservice Google-Shop DevSecOps pipeline status.</p>
-                            <p>GitHub: https://github.com/elsonpulikkan96/ </p>
+                            <p>Github Link :- https://github.com/elsonpulikkan96/ </p>
                             <p>Live Website: https://store.elsondevops.cloud/</p>
-                            <p>Project: ${env.JOB_NAME}</p>
+		            <p>Project: ${env.JOB_NAME}</p>
                             <p>Build Number: ${env.BUILD_NUMBER}</p>
                             <p>Build Status: ${buildStatus}</p>
                             <p>Started by: ${buildUser}</p>
@@ -201,4 +186,4 @@ pipeline {
             }
         }
     }
-}
+} 
