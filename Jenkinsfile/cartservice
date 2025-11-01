@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         // .NET SDK should be installed in Jenkins global tools config
-        dotnetsdk 'dotnet8'
+        dotnetsdk 'dotnet9'
     }
 
     environment {
