@@ -247,7 +247,7 @@ spec:
           # - name: CYMBAL_BRANDING
           #   value: "true"
           # - name: FRONTEND_MESSAGE
-          #   value: "Elson's Aesthetic E-comm Store."
+          #   value: "Replace this with a message you want to display on all pages."
           resources:
             requests:
               cpu: 100m
@@ -467,7 +467,7 @@ spec:
               - ALL
           privileged: false
           readOnlyRootFilesystem: true
-        image: elsonpulikkan/loadgenerator:latest
+        image: harishnshetty/loadgenerator:latest
         env:
         - name: FRONTEND_ADDR
           value: "frontend:80"

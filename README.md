@@ -436,15 +436,15 @@ aws configure list
 eksctl create cluster \
   --name my-cluster \
   --region us-east-1 \
-  --version 1.33 \
+  --version 1.34 \
   --without-nodegroup
 
 eksctl create nodegroup \
   --cluster my-cluster \
   --name my-nodes-ng \
-  --nodes 2 \
-  --nodes-min 2  \
-  --nodes-max 3 \
+  --nodes 3 \
+  --nodes-min 3  \
+  --nodes-max 4 \
   --node-type t3.medium
 ```
 
