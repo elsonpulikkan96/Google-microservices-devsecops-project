@@ -434,14 +434,14 @@ aws configure list
 
 ```bash
 eksctl create cluster \
-  --name my-cluster \
+  --name store-elsondevops-cloud \
   --region us-east-1 \
   --version 1.34 \
   --without-nodegroup
 
 eksctl create nodegroup \
-  --cluster my-cluster \
-  --name my-nodes-ng \
+  --cluster store-elsondevops-cloud \
+  --name worker-nodes \
   --nodes 3 \
   --nodes-min 3  \
   --nodes-max 4 \
@@ -453,7 +453,7 @@ eksctl create nodegroup \
 ## 7. Update kubeconfig
 
 ```bash
-aws eks update-kubeconfig --name my-cluster --region us-east-1
+aws eks update-kubeconfig --name store-elsondevops-cloud --region us-east-1
 ```
 
 ---
@@ -461,7 +461,7 @@ aws eks update-kubeconfig --name my-cluster --region us-east-1
 ## 8. Associate IAM OIDC Provider
 
 ```bash
-eksctl utils associate-iam-oidc-provider --cluster my-cluster --approve
+eksctl utils associate-iam-oidc-provider --cluster store-elsondevops-cloud --approve
 ```
 
 ---
@@ -486,10 +486,10 @@ Replace `<ACCOUNT_ID>` with your AWS account ID.
 
 ```bash
 eksctl create iamserviceaccount \
-  --cluster=my-cluster \
+  --cluster=store-elsondevops-cloud \
   --namespace=kube-system \
   --name=aws-load-balancer-controller \
-  --attach-policy-arn=arn:aws:iam::<ACCOUNT_ID>:policy/AWSLoadBalancerControllerIAMPolicy \
+  --attach-policy-arn=arn:aws:iam::739275449845:policy/AWSLoadBalancerControllerIAMPolicy \
   --override-existing-serviceaccounts \
   --region us-east-1 \
   --approve
@@ -504,7 +504,7 @@ helm repo add eks https://aws.github.io/eks-charts
 helm repo update eks
 
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system \
-  --set clusterName=my-cluster \
+  --set clusterName=store-elsondevops-cloud \
   --set serviceAccount.create=false \
   --set serviceAccount.name=aws-load-balancer-controller \
   --set region=us-east-1 \
@@ -619,7 +619,7 @@ Password: encrypted-password
  - For more conents reach out : https://github.com/elsonpulikkan96/
 
 ```bash
-eksctl delete cluster --name my-cluster --region ap-south-1
+eksctl delete cluster --name store-elsondevops-cloud --region us-east-1
 ```
 
 ## Notes and Recommendations
