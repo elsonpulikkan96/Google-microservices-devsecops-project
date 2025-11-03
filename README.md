@@ -441,7 +441,7 @@ eksctl create cluster \
 
 eksctl create nodegroup \
   --cluster store-elsondevops-cloud \
-  --name worker-nodes \
+  --name worker- \
   --nodes 3 \
   --nodes-min 3  \
   --nodes-max 4 \
