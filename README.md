@@ -441,7 +441,7 @@ eksctl create cluster \
 
 eksctl create nodegroup \
   --cluster store-elsondevops-cloud \
-  --name worker- \
+  --name worker \
   --nodes 3 \
   --nodes-min 3  \
   --nodes-max 4 \
@@ -508,7 +508,7 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n ku
   --set serviceAccount.create=false \
   --set serviceAccount.name=aws-load-balancer-controller \
   --set region=us-east-1 \
-  --version 1.13.3
+  --version 1.14.1
 ```
 
 **Optional:** List available versions:
