@@ -2,16 +2,16 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: myingress
+  namespace: default
   annotations:
+    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/load-balancer-name: shop-ns-alb
-    # Target Type and Listener Port
-
-
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
-
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:739275449845:certificate/f5be8959-2f51-44b4-a827-6ca97cc45a98 # Replace with your ACM certificate ARN
+    # Use your issued ACM cert ARN (region us-east-1 required for the ALB)
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:739275449845:certificate/f5be8959-2f51-44b4-a827-6ca97cc45a98
+    # ALB will use gRPC/HTTP2 to backends (pods). Keep this if you want ALB -> pod gRPC.
     alb.ingress.kubernetes.io/backend-protocol-version: GRPC
     alb.ingress.kubernetes.io/ssl-redirect: '443'
 spec:
@@ -24,11 +24,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: frontend  # Or your main store frontend
+                name: frontend
                 port:
                   number: 80
-
-      # 👇 Default catch-all (matches any host not listed above)
     - host: ""
       http:
         paths:
@@ -36,6 +34,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: frontend # or your default frontend
+                name: frontend
                 port:
                   number: 80
