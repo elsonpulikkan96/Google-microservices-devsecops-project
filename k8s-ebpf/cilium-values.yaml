@@ -1,0 +1,32 @@
+# Cilium values tuned for EKS chaining mode (aws-vpc-cni) + Hubble + OpenMetrics
+cni:
+  chainingMode: aws-cni     # chain with aws-vpc-cni (keep aws IPAM)
+  exclusive: false
+
+routingMode: native
+enableIPv4Masquerade: false
+
+prometheus:
+  enabled: true
+
+operator:
+  prometheus:
+    enabled: true
+
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    # UI is a separate install (hubble-ui). Keep false here.
+    enabled: false
+  metrics:
+    enableOpenMetrics: true
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - httpV2   # HTTP/2 metrics -> gRPC visibility
