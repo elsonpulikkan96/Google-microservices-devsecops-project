@@ -1,6 +1,6 @@
-# Cilium values tuned for EKS chaining mode (aws-vpc-cni) + Hubble + OpenMetrics
+# Cilium Helm values: aws-cni CHAINING mode + Hubble + OpenMetrics
 cni:
-  chainingMode: aws-cni     # chain with aws-vpc-cni (keep aws IPAM)
+  chainingMode: aws-cni
   exclusive: false
 
 routingMode: native
@@ -18,7 +18,6 @@ hubble:
   relay:
     enabled: true
   ui:
-    # UI is a separate install (hubble-ui). Keep false here.
     enabled: false
   metrics:
     enableOpenMetrics: true
@@ -29,4 +28,4 @@ hubble:
       - flow
       - port-distribution
       - icmp
-      - httpV2   # HTTP/2 metrics -> gRPC visibility
+      - httpV2

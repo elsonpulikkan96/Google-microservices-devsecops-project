@@ -1,4 +1,4 @@
-# kube-prometheus-stack values (Prometheus + Grafana)
+# kube-prometheus-stack (Prometheus + Grafana) values for annotation-based scraping
 grafana:
   adminPassword: "Admin#123"
   defaultDashboardsTimezone: "utc"
@@ -11,7 +11,6 @@ prometheus:
     scrapeInterval: 30s
     evaluationInterval: 30s
 
-    # Use annotation-based discovery so Cilium/Hubble do not need ServiceMonitor CRDs to exist first.
     additionalScrapeConfigs:
       - job_name: 'kubernetes-pods'
         kubernetes_sd_configs:
@@ -26,7 +25,7 @@ prometheus:
             regex: ([^:]+)(?::\d+)?;(\d+)
             replacement: ${1}:${2}
 
-      - job_name: 'kubernetes-endpoints'   # picks up hubble-metrics service (if annotated)
+      - job_name: 'kubernetes-endpoints'
         kubernetes_sd_configs:
           - role: endpoints
         relabel_configs:
